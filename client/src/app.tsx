@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchReport, postScan } from './api.js';
+import { MapView } from './map.js';
 import type { ReportDataset } from './types.js';
 
 const TABS = ['Map', 'Hotspots', 'Duplicates'] as const;
@@ -8,6 +9,7 @@ export type Tab = (typeof TABS)[number];
 export function App() {
   const [dataset, setDataset] = useState<ReportDataset | null>(null);
   const [tab, setTab] = useState<Tab>('Map');
+  const [moduleFilter, setModuleFilter] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +42,9 @@ export function App() {
       <main id="view" style={{ padding: 8 }}>
         {dataset === null
           ? <div>{scanning ? 'Scanning…' : 'Loading…'}</div>
-          : <div data-tab={tab}>placeholder for {tab} (wired in later tasks)</div>}
+          : tab === 'Map'
+            ? <MapView dataset={dataset} onOpenModule={(m) => { setTab('Hotspots'); setModuleFilter(m); }} />
+            : <div data-tab={tab}>placeholder for {tab} (wired in later tasks)</div>}
       </main>
     </div>
   );
