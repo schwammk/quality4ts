@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchReport, postScan } from './api.js';
+import { Duplicates } from './dupes.js';
+import { Hotspots } from './hotspots.js';
 import { MapView } from './map.js';
 import type { ReportDataset } from './types.js';
 
@@ -10,6 +12,8 @@ export function App() {
   const [dataset, setDataset] = useState<ReportDataset | null>(null);
   const [tab, setTab] = useState<Tab>('Map');
   const [moduleFilter, setModuleFilter] = useState<string | null>(null);
+  const [selected, setSelected] = useState<{ file: string; line: number } | null>(null);
+  const [pairSel, setPairSel] = useState<{ leftFile: string; leftLine: number; rightFile: string; rightLine: number } | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +48,9 @@ export function App() {
           ? <div>{scanning ? 'Scanning…' : 'Loading…'}</div>
           : tab === 'Map'
             ? <MapView dataset={dataset} onOpenModule={(m) => { setTab('Hotspots'); setModuleFilter(m); }} />
-            : <div data-tab={tab}>placeholder for {tab} (wired in later tasks)</div>}
+            : tab === 'Hotspots'
+              ? <div data-tab={tab}><Hotspots dataset={dataset} moduleFilter={moduleFilter} onOpenFunction={(file, startLine) => { setSelected({ file, line: startLine }); setPairSel(null); }} onClearModule={() => setModuleFilter(null)} /></div>
+              : <div data-tab={tab}><Duplicates dataset={dataset} onOpenPair={(leftFile, leftLine, rightFile, rightLine) => { setPairSel({ leftFile, leftLine, rightFile, rightLine }); setSelected(null); }} /></div>}
       </main>
     </div>
   );
