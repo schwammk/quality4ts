@@ -25,7 +25,7 @@ export function SourcePanel(props: { selection: { file: string; line: number } |
   if (!props.selection) return null;
   const lines = (content ?? '').replace(/\n$/, '').split('\n');
   return (
-    <aside ref={asideRef} style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 460, background: '#fff', borderLeft: '1px solid #ddd', overflow: 'auto', zIndex: 20 }}>
+    <aside ref={asideRef} style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(42vw, 760px)', minWidth: 360, background: '#fff', borderLeft: '1px solid #ddd', overflow: 'auto', zIndex: 20 }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', borderBottom: '1px solid #eee' }}>
         <code style={{ fontSize: 12 }}>{props.selection.file}</code>
         <button onClick={props.onClose}>✕</button>

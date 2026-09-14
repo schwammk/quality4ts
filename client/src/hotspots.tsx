@@ -43,8 +43,9 @@ export function Hotspots(props: {
   moduleFilter: string | null;
   onOpenFunction: (file: string, startLine: number) => void;
   onClearModule?: () => void;
+  onBackToMap?: () => void;
 }) {
-  const { dataset, moduleFilter, onOpenFunction, onClearModule } = props;
+  const { dataset, moduleFilter, onOpenFunction, onClearModule, onBackToMap } = props;
   const [key, setKey] = useState<SortKey>('crap');
   const [dir, setDir] = useState<1 | -1>(-1);
   const [risk, setRisk] = useState<Risk | 'all'>('all');
@@ -85,7 +86,10 @@ export function Hotspots(props: {
           </button>
         ))}
         {moduleFilter && (
-          <button onClick={() => onClearModule?.()}>module: {moduleFilter} ✕</button>
+          <>
+            {onBackToMap && <button onClick={onBackToMap}>↩ Map</button>}
+            <button onClick={() => onClearModule?.()}>module: {moduleFilter} ✕</button>
+          </>
         )}
       </div>
       <table>

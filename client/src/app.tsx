@@ -52,11 +52,16 @@ export function App() {
       <main id="view" style={{ padding: 8 }}>
         {dataset === null
           ? <div>{scanning ? 'Scanning…' : 'Loading…'}</div>
-          : tab === 'Map'
-            ? <MapView dataset={dataset} onOpenModule={(m) => { setTab('Hotspots'); setModuleFilter(m); }} onNavigate={() => { setSelected(null); setPairSel(null); }} />
-            : tab === 'Hotspots'
-              ? <div data-tab={tab}><Hotspots dataset={dataset} moduleFilter={moduleFilter} onOpenFunction={(file, startLine) => { setSelected({ file, line: startLine }); setPairSel(null); }} onClearModule={() => setModuleFilter(null)} /></div>
-              : <div data-tab={tab}><Duplicates dataset={dataset} onOpenPair={(leftFile, leftLine, rightFile, rightLine) => { setPairSel({ leftFile, leftLine, rightFile, rightLine }); setSelected(null); }} /></div>}
+          : <>
+              <div style={{ display: tab === 'Map' ? undefined : 'none' }}>
+                <MapView dataset={dataset} onOpenModule={(m) => { setTab('Hotspots'); setModuleFilter(m); }} onNavigate={() => { setSelected(null); setPairSel(null); }} />
+              </div>
+              {tab === 'Hotspots'
+                ? <div data-tab={tab}><Hotspots dataset={dataset} moduleFilter={moduleFilter} onOpenFunction={(file, startLine) => { setSelected({ file, line: startLine }); setPairSel(null); }} onClearModule={() => setModuleFilter(null)} onBackToMap={() => setTab('Map')} /></div>
+                : tab === 'Duplicates'
+                  ? <div data-tab={tab}><Duplicates dataset={dataset} onOpenPair={(leftFile, leftLine, rightFile, rightLine) => { setPairSel({ leftFile, leftLine, rightFile, rightLine }); setSelected(null); }} /></div>
+                  : null}
+            </>}
       </main>
       <SourcePanel selection={selected} onClose={() => setSelected(null)} />
       <PairView pair={pairSel} onClose={() => setPairSel(null)} />
