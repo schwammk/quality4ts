@@ -57,3 +57,49 @@ describe('buildReport', () => {
     expect(report.unattributed).toEqual({ files: ['tests/a.test.ts', 'tests/b.test.ts'], functionCount: 1 });
   });
 });
+
+describe('buildReport normalizes absolute sibling paths', () => {
+  // crap4ts and dry4ts emit absolute paths; arch4ts module names are relative.
+  const absCrap = [
+    { file: '/proj/src/a.ts', name: 'a', cc: 2, coverage: 1, crap: 2, risk: 'low', startLine: 1, endLine: 4 },
+    { file: '/proj/src/b.ts', name: 'dupA', cc: 1, coverage: null, crap: null, risk: 'unknown', startLine: 2, endLine: 6 },
+    { file: '/proj/tests/a.test.ts', name: 't', cc: 1, coverage: 1, crap: 1, risk: 'low', startLine: 1, endLine: 3 },
+  ];
+  const absDry = [
+    { score: 1, left: { file: '/proj/src/b.ts', name: 'dupA', startLine: 2, endLine: 6, nodes: 40 }, right: { file: '/proj/src/a.ts', name: 'dup2', startLine: 12, endLine: 16, nodes: 40 } },
+  ];
+  const abs = buildReport({
+    target: '/proj',
+    thresholds: { maxCrap: 30, dryThreshold: 0.82 },
+    architectureRaw: canned('canned-arch.json'),
+    crapRaw: absCrap,
+    dryRaw: absDry,
+    generatedAt: '2026-09-14T00:00:00.000Z',
+  });
+
+  it('attributes functions to modules via relativized paths', () => {
+    expect(abs.unattributed.files).toEqual(['tests/a.test.ts']);
+    const a = abs.modules.find((m) => m.module === 'src/a.ts')!;
+    expect(a.functionCount).toBe(1);
+    expect(a.dupePairs).toBe(1);
+  });
+
+  it('aligns duplicates via relativized paths', () => {
+    const dupA = abs.functions.find((f) => f.file === 'src/b.ts')!;
+    expect(dupA.dupes).toEqual([{ otherFile: 'src/a.ts', otherName: 'dup2', otherStartLine: 12, score: 1 }]);
+    expect(abs.duplicates[0].left.file).toBe('src/b.ts');
+    expect(abs.duplicates[0].right.file).toBe('src/a.ts');
+  });
+
+  it('keeps files outside the target as-is', () => {
+    const outside = buildReport({
+      target: '/proj',
+      thresholds: { maxCrap: 30, dryThreshold: 0.82 },
+      architectureRaw: canned('canned-arch.json'),
+      crapRaw: [{ file: '/elsewhere/src/z.ts', name: 'z', cc: 1, coverage: null, crap: null, risk: 'unknown', startLine: 1, endLine: 2 }],
+      dryRaw: [],
+      generatedAt: '2026-09-14T00:00:00.000Z',
+    });
+    expect(outside.functions[0].file).toBe('/elsewhere/src/z.ts');
+  });
+});
