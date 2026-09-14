@@ -20,7 +20,7 @@ export function SourcePanel(props: { selection: { file: string; line: number } |
 
   useEffect(() => {
     asideRef.current?.querySelector('.hl')?.scrollIntoView({ block: 'center' });
-  }, [content]);
+  }, [content, props.selection?.line]);
 
   if (!props.selection) return null;
   const lines = (content ?? '').replace(/\n$/, '').split('\n');
