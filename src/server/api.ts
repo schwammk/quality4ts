@@ -78,7 +78,12 @@ export class ScanService {
     if (isAbsolute(file) || file.includes('\u0000')) throw new CliError(`invalid source path: ${file}`);
     const abs = resolve(normalize(join(this.root, file)));
     if (!abs.startsWith(this.root + sep)) throw new CliError(`path escapes project root: ${file}`);
-    const content = readFileSync(abs, 'utf8');
+    let content: string;
+    try {
+      content = readFileSync(abs, 'utf8');
+    } catch {
+      throw new CliError(`source file not found: ${file}`);
+    }
     return { content, totalLines: content.split('\n').length };
   }
 }
