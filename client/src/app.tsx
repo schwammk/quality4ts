@@ -3,6 +3,8 @@ import { fetchReport, postScan } from './api.js';
 import { Duplicates } from './dupes.js';
 import { Hotspots } from './hotspots.js';
 import { MapView } from './map.js';
+import { PairView } from './pairview.js';
+import { SourcePanel } from './sourcepanel.js';
 import type { ReportDataset } from './types.js';
 
 const TABS = ['Map', 'Hotspots', 'Duplicates'] as const;
@@ -24,6 +26,8 @@ export function App() {
   useEffect(() => { void load(); }, [load]);
 
   const reanalyze = useCallback(async () => {
+    setSelected(null);
+    setPairSel(null);
     setScanning(true);
     try { setDataset(await postScan()); } catch (e) { setError(String((e as Error).message)); }
     finally { setScanning(false); }
@@ -47,11 +51,13 @@ export function App() {
         {dataset === null
           ? <div>{scanning ? 'Scanning…' : 'Loading…'}</div>
           : tab === 'Map'
-            ? <MapView dataset={dataset} onOpenModule={(m) => { setTab('Hotspots'); setModuleFilter(m); }} />
+            ? <MapView dataset={dataset} onOpenModule={(m) => { setTab('Hotspots'); setModuleFilter(m); }} onNavigate={() => { setSelected(null); setPairSel(null); }} />
             : tab === 'Hotspots'
               ? <div data-tab={tab}><Hotspots dataset={dataset} moduleFilter={moduleFilter} onOpenFunction={(file, startLine) => { setSelected({ file, line: startLine }); setPairSel(null); }} onClearModule={() => setModuleFilter(null)} /></div>
               : <div data-tab={tab}><Duplicates dataset={dataset} onOpenPair={(leftFile, leftLine, rightFile, rightLine) => { setPairSel({ leftFile, leftLine, rightFile, rightLine }); setSelected(null); }} /></div>}
       </main>
+      <SourcePanel selection={selected} onClose={() => setSelected(null)} />
+      <PairView pair={pairSel} onClose={() => setPairSel(null)} />
     </div>
   );
 }
