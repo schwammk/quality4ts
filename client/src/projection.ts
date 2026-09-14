@@ -283,20 +283,10 @@ export function buildMapView(dataset: ReportDataset, path: string[]): MapView {
   const layering = computeLayering(view.nodeIds, layoutEdges);
   const feedbackSet = new Set(layering.feedback.map((e) => `${e.from}\u0000${e.to}`));
 
-  const nodes = layoutView(view.nodeIds, layoutEdges, {
-    leaf: (id) => view.nodeInfo.get(id)?.leaf ?? false,
-    label: (id) => view.nodeInfo.get(id)?.label ?? id,
-    fullName: (id) => view.nodeInfo.get(id)?.fullName ?? id,
-    module: (id) => view.nodeInfo.get(id)?.module ?? null,
-    abstract: (id) =>
-      (view.nodeInfo.get(id)?.contained ?? []).some((m) =>
-        architecture.abstractModules.includes(m)
-      ),
-  });
-
   // memoized subtree-cycle detection (per node id); a node is cycle-red iff it
   // participates in this level's cycle paths OR any descendant subtree is
-  // cycle-red (arch4ts final semantics)
+  // cycle-red (arch4ts final semantics) — computed before layoutView so the
+  // cycle callback can read it
   const cycleMemo = new Map<string, boolean>();
   const childLayeringMemo = new Map<string, LayeringResult | null>();
   const childLayeringFor = (nodeId: string): LayeringResult | null => {
@@ -363,26 +353,37 @@ export function buildMapView(dataset: ReportDataset, path: string[]): MapView {
     nodeCycle.set(n, subtreeCycles(n));
   }
 
-  // cycle lines relative to the current path, joined with '->', deduped
+  const nodes = layoutView(view.nodeIds, layoutEdges, {
+    leaf: (id) => view.nodeInfo.get(id)?.leaf ?? false,
+    label: (id) => view.nodeInfo.get(id)?.label ?? id,
+    fullName: (id) => view.nodeInfo.get(id)?.fullName ?? id,
+    module: (id) => view.nodeInfo.get(id)?.module ?? null,
+    cycle: (id) => nodeCycle.get(id) ?? false,
+    abstract: (id) =>
+      (view.nodeInfo.get(id)?.contained ?? []).some((m) =>
+        architecture.abstractModules.includes(m)
+      ),
+  });
+
+  // cycle lines relative to the current path, joined with '->', deduped, sorted
   const cycleLines: string[] = [];
   const seenLines = new Set<string>();
-  for (const cycle of layering.cycles) {
-    const line = cycle.map((id) => stripFileSuffix(id)).join('->');
+  const pushLine = (line: string) => {
     if (!seenLines.has(line)) {
       seenLines.add(line);
       cycleLines.push(line);
     }
+  };
+  for (const cycle of layering.cycles) {
+    pushLine(cycle.map((id) => stripFileSuffix(id)).join('->'));
   }
   for (const n of view.nodeIds) {
-    const childLayering = childLayeringFor(n);
-    if (childLayering === null) continue;
+    if (!childLayeringFor(n)) continue;
     for (const line of subtreeCycleLines(architecture, [...path, stripFileSuffix(n)])) {
-      if (!seenLines.has(line)) {
-        seenLines.add(line);
-        cycleLines.push(line);
-      }
+      pushLine(line);
     }
   }
+  cycleLines.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   // cycle lines from a subtree: this level's cycles plus deeper views, relative
   // to the sub-path, deduped across the whole list
   function subtreeCycleLines(
@@ -425,7 +426,6 @@ export function buildMapView(dataset: ReportDataset, path: string[]): MapView {
   }));
 
   void nodes;
-  void nodeCycle;
   const sceneHeight = computeSceneHeight(nodes, cycleLines);
   return { namespacePath: path, nodes, edges, cycleLines, sceneHeight };
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { assignLevels, breakCycles, orderRowByBarycenter } from '../client/src/layout.js';
-import { projectModules } from '../client/src/projection.js';
+import { buildMapView, projectModules } from '../client/src/projection.js';
 import type { ReportDataset } from '../client/src/types.js';
 
 const dataset = (nodes: string[], edges: [string, string][]): ReportDataset => ({
@@ -50,5 +50,16 @@ describe('projectModules', () => {
       .toEqual(['app', 'main', 'types', 'util']);
     expect(projectModules(ds.architecture.architecture.graph, ['src', 'app']).children)
       .toEqual(['core']);
+  });
+});
+
+describe('buildMapView node extras', () => {
+  it('exposes maxLabelChars and cycle flags on every node', () => {
+    // a→b→c→a forms a 3-cycle: c is the feedback-edge source, all three red
+    const view = buildMapView(dataset(['a', 'b', 'c'], [['a', 'b'], ['b', 'c'], ['c', 'a']]), []);
+    expect(view.nodes.map((n) => n.id)).toEqual(['a', 'b', 'c']);
+    expect(view.nodes.every((n) => n.maxLabelChars >= 8)).toBe(true);
+    expect(view.nodes.map((n) => n.cycle)).toEqual([true, true, true]);
+    expect(view.cycleLines).toEqual(['a->b->c->a']);
   });
 });

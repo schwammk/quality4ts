@@ -38,6 +38,8 @@ export interface NodeView {
   label: string;
   fullName: string;
   module: string | null;
+  cycle: boolean;
+  maxLabelChars: number;
 }
 
 export interface EdgeView {
@@ -445,6 +447,7 @@ export interface LayoutViewOptions {
   label?: (id: string) => string;
   fullName?: (id: string) => string;
   module?: (id: string) => string | null;
+  cycle?: (id: string) => boolean;
 }
 
 // One rect per node, laid out by level rank rows + barycenter order + centered
@@ -492,6 +495,14 @@ export function layoutView(
   const labelOf = opts.label ?? abbreviate;
   const fullNameOf = opts.fullName ?? ((id: string) => id);
   const moduleOf = opts.module ?? (() => null);
+  const cycleOf = opts.cycle ?? (() => false);
+
+  // arch4ts ModulePosition.maxLabelChars: room for label line-splitting; the
+  // label itself is NOT truncated here (map component splits lines)
+  const maxLabelChars = Math.max(
+    8,
+    Math.floor(Math.max(20, rectWidth - 12) / LAYOUT.labelCharWidth)
+  );
 
   const nodes: NodeView[] = [];
   ordered.forEach((ids, row) => {
@@ -509,6 +520,8 @@ export function layoutView(
         label: labelOf(id),
         fullName: fullNameOf(id),
         module: moduleOf(id),
+        cycle: cycleOf(id),
+        maxLabelChars,
       });
     });
   });
