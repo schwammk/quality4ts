@@ -22,6 +22,7 @@ export class ScanService {
   private readonly coverage: ScanOptions['coverage'];
   private readonly bins: { crap4ts: string; dry4ts: string; arch4ts: string };
   private dataset: ReportDataset | null = null;
+  private scanPromise: Promise<ReportDataset> | null = null;
 
   constructor(projectRoot: string, options: ScanOptions = {}) {
     this.root = resolve(projectRoot);
@@ -37,6 +38,12 @@ export class ScanService {
 
   async scan(): Promise<ReportDataset> {
     if (this.dataset) return this.dataset;
+    this.scanPromise ??= this.runScan();
+    this.dataset = await this.scanPromise;
+    return this.dataset;
+  }
+
+  private async runScan(): Promise<ReportDataset> {
     const tmp = mkdtempSync(join(tmpdir(), 'q4ts-scan-'));
     try {
       const archFile = join(tmp, 'arch.json');
@@ -71,6 +78,7 @@ export class ScanService {
 
   async reanalyze(): Promise<ReportDataset> {
     this.dataset = null;
+    this.scanPromise = null;
     return this.scan();
   }
 

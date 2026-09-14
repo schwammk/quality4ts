@@ -17,8 +17,12 @@ function parseArchitecture(raw: unknown): ArchitectureDump {
     throw new CliError('malformed: arch4ts dump must be an object');
   }
   const obj = raw as Record<string, unknown>;
-  if (typeof obj.architecture !== 'object' || obj.architecture === null) {
+  if (typeof obj.architecture !== 'object' || obj.architecture === null || Array.isArray(obj.architecture)) {
     throw new CliError('malformed: arch4ts dump lacks an architecture object');
+  }
+  const arch = obj.architecture as Record<string, unknown>;
+  if (typeof arch.graph !== 'object' || arch.graph === null || Array.isArray(arch.graph)) {
+    throw new CliError('malformed: arch4ts dump lacks a graph object');
   }
   return raw as ArchitectureDump;
 }

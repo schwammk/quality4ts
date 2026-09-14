@@ -20,12 +20,14 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setError(null);
     try { setDataset(await fetchReport()); } catch (e) { setError(String((e as Error).message)); }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
 
   const reanalyze = useCallback(async () => {
+    setError(null);
     setSelected(null);
     setPairSel(null);
     setScanning(true);

@@ -53,6 +53,9 @@ export function Hotspots(props: {
     const m: Record<string, string> = {};
     const map = dataset.architecture.architecture.moduleToSourceFile;
     for (const [module, file] of Object.entries(map)) m[file] = module;
+    for (const node of dataset.architecture.architecture.graph.nodes) {
+      if (!(node in m)) m[node] = node;
+    }
     return m;
   }, [dataset]);
 
