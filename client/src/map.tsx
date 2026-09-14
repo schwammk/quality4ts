@@ -168,7 +168,6 @@ export function MapView(props: MapViewProps): JSX.Element {
       if (node.leaf) {
         if (node.module !== null) {
           onOpenModule(node.module);
-          onNavigate?.();
         }
         return;
       }
