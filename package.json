@@ -3,18 +3,29 @@
   "version": "0.1.0",
   "description": "Combined quality dashboard: crap4ts + dry4ts + arch4ts",
   "type": "module",
-  "bin": { "quality4ts": "dist/cli.js" },
+  "bin": {
+    "quality4ts": "dist/cli.js"
+  },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc -p client && vite build",
     "prepare": "npm run build",
     "test": "vitest run"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "typescript": ">=5 <6"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "happy-dom": "^20.14.5",
+    "vite": "^7.3.6",
     "vitest": "^3"
   }
 }
