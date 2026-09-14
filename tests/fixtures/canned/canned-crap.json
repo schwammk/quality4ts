@@ -1,0 +1,7 @@
+[
+  { "file": "src/a.ts", "name": "a", "cc": 2, "coverage": 1, "crap": 2, "risk": "low", "startLine": 1, "endLine": 4 },
+  { "file": "src/a.ts", "name": "b", "cc": 8, "coverage": 0, "crap": 65, "risk": "high", "startLine": 6, "endLine": 10 },
+  { "file": "src/b.ts", "name": "dupA", "cc": 1, "coverage": null, "crap": null, "risk": "unknown", "startLine": 2, "endLine": 6 },
+  { "file": "src/c.ts", "name": "c", "cc": 3, "coverage": 0.25, "crap": 6.796875, "risk": "moderate", "startLine": 4, "endLine": 8 },
+  { "file": "tests/a.test.ts", "name": "t", "cc": 1, "coverage": 1, "crap": 1, "risk": "low", "startLine": 1, "endLine": 3 }
+]

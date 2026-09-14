@@ -1,0 +1,18 @@
+{
+  "architecture": {
+    "graph": {
+      "nodes": ["src/a.ts", "src/b.ts", "src/c.ts"],
+      "edges": [
+        { "from": "src/a.ts", "to": "src/b.ts" },
+        { "from": "src/b.ts", "to": "src/c.ts" }
+      ]
+    },
+    "abstractModules": ["src/b.ts"],
+    "moduleToSourceFile": {
+      "src/a.ts": "src/a.ts",
+      "src/b.ts": "src/b.ts",
+      "src/c.ts": "src/c.ts"
+    }
+  },
+  "layering": { "layers": [] }
+}

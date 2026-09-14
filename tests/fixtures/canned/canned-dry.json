@@ -1,0 +1,12 @@
+[
+  {
+    "score": 1,
+    "left": { "file": "src/b.ts", "name": "dupA", "startLine": 2, "endLine": 6, "nodes": 40 },
+    "right": { "file": "src/a.ts", "name": "dup2", "startLine": 12, "endLine": 16, "nodes": 40 }
+  },
+  {
+    "score": 0.9,
+    "left": { "file": "tests/a.test.ts", "name": "t", "startLine": 1, "endLine": 3, "nodes": 30 },
+    "right": { "file": "tests/b.test.ts", "name": "t", "startLine": 5, "endLine": 7, "nodes": 30 }
+  }
+]
