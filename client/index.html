@@ -4,17 +4,24 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>quality4ts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/svg+xml" href="/brand/signet-scheer.svg" />
     <style>
-      body { margin: 0; font-family: -apple-system, 'Segoe UI', sans-serif; color: #0f141e; background: #fafafa; }
-      button { cursor: pointer; }
-      .tab-btn { border: none; background: none; padding: 8px 14px; font-size: 14px; }
-      .tab-btn.active { border-bottom: 2px solid #1c7ed6; font-weight: 600; }
+      body { margin: 0; font-family: var(--font-sans); color: var(--fg-1); background: var(--bg-base); }
+      button { cursor: pointer; font-family: var(--font-sans); }
+      .tab-btn { border: none; background: none; padding: var(--space-2) var(--space-4); font-size: var(--fs-label-lg); color: var(--fg-2); }
+      .tab-btn.active { border-bottom: 2px solid var(--scheer-red); font-weight: var(--w-bold); color: var(--fg-1); }
       .dimmed { opacity: 0.15; transition: opacity 0.1s; }
-      .badge { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 11px; color: #fff; }
-      .line .ln { display: inline-block; width: 42px; color: #8a9199; text-align: right; margin-right: 8px; }
+      .badge { display: inline-block; padding: 1px 7px; border-radius: var(--radius-pill); font-size: var(--fs-label-sm); color: #fff; }
+      .line .ln { display: inline-block; width: 42px; color: var(--text-muted); text-align: right; margin-right: var(--space-2); font-family: var(--font-mono); }
       .tok-key { color: #1c63d6; }
       .tok-str { color: #2b8a3e; }
-      .tok-com { color: #8a9199; }
+      .tok-com { color: var(--text-muted); }
       .tok-num { color: #e8590c; }
       .hl { background: #fff3bf; }
     </style>

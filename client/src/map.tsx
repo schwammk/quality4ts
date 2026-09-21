@@ -329,14 +329,14 @@ export function MapView(props: MapViewProps): JSX.Element {
               return (
                 <Fragment key={`badges-${node.id}`}>
                   <g className="badge">
-                    <circle cx={crapCx} cy={cy} r={r} fill={bandColor(dominantBand(worst))} />
+                    <circle cx={crapCx} cy={cy} r={r} style={{ fill: bandColor(dominantBand(worst)) }} />
                     <text x={crapCx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize={9} fill="#fff">
                       {String(worst ?? '?')}
                     </text>
                     <title>{worst === null ? 'worst CRAP ?' : `worst CRAP ${worst}`}</title>
                   </g>
                   <g className="badge">
-                    <circle cx={dryCx} cy={cy} r={r} fill={dupes > 0 ? '#c92a2a' : '#8a9199'} />
+                    <circle cx={dryCx} cy={cy} r={r} style={{ fill: dupes > 0 ? 'var(--danger)' : 'var(--text-muted)' }} />
                     <text x={dryCx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize={9} fill="#fff">
                       {String(dupes)}
                     </text>

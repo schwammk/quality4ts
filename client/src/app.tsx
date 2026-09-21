@@ -37,12 +37,13 @@ export function App() {
 
   return (
     <div>
-      <header style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '8px 16px', borderBottom: '1px solid #ddd' }}>
+      <header style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-3)', padding: 'var(--space-2) var(--space-4)', borderBottom: '1px solid var(--border-default)' }}>
+        <img src="/signet-scheer.svg" alt="" style={{ height: 22, alignSelf: 'center' }} />
         <strong>quality4ts</strong>
         {dataset && <span>{dataset.meta.target}</span>}
-        {dataset && <span style={{ color: '#8a9199', fontSize: 12 }}>generated {dataset.meta.generatedAt}</span>}
+        {dataset && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--fs-body-sm)' }}>generated {dataset.meta.generatedAt}</span>}
         <button id="reanalyze" disabled={scanning} onClick={reanalyze}>{scanning ? 'Scanning…' : 'Reanalyze'}</button>
-        <nav style={{ display: 'flex', gap: 4 }}>
+        <nav style={{ display: 'flex', gap: 'var(--space-1)' }}>
           {TABS.map((t) => (
             <button key={t} className={`tab-btn${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>{t}</button>
           ))}
