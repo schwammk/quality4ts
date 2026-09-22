@@ -46,6 +46,6 @@ describe('Hotspots component', () => {
     act(() => { root.render(<Hotspots dataset={ds()} moduleFilter={null} onOpenFunction={() => {}} />); });
     const cells = [...container.querySelectorAll('tbody tr td:nth-child(2)')].map((td) => td.textContent);
     expect(cells).toEqual(['hot', 'mid', 'cold', 't']);
-    expect(container.querySelector('tbody tr .badge')?.getAttribute('style')).toContain('#c92a2a');
+    expect(container.querySelector('tbody tr .badge')?.getAttribute('style')).toContain('var(--danger)');
   });
 });
