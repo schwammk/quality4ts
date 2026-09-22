@@ -1,8 +1,8 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
-import { main, parseArgs } from '../src/cli.js';
+import { afterAll, describe, expect, it, vi } from 'vitest';
+import { main, parseArgs, extendedHelp } from '../src/cli.js';
 import { CliError } from '../src/cli-error.js';
 import { dropStubBins, makeStubBins, type StubBins } from './helpers.js';
 
@@ -49,6 +49,39 @@ describe('parseArgs', () => {
   it('--help and empty argv yield help', () => {
     expect(parseArgs(['--help']).command).toBe('help');
     expect(parseArgs([]).command).toBe('help');
+  });
+});
+
+describe('extended option help', () => {
+  it('returns detailed text for a known option topic', () => {
+    const text = extendedHelp(['--help', 'max-crap']);
+    expect(text).toBeTruthy();
+    expect(text!).toMatch(/CRAP/);
+    expect(text!.length).toBeGreaterThan(80);
+  });
+
+  it('falls back to null for unknown topics and plain --help', () => {
+    expect(extendedHelp(['--help', 'nope'])).toBeNull();
+    expect(extendedHelp(['--help'])).toBeNull();
+    expect(extendedHelp([])).toBeNull();
+  });
+
+  it('finds the topic also after a subcommand', () => {
+    expect(extendedHelp(['serve', '.', '--help', 'port'])).toMatch(/port/i);
+  });
+
+  it('main prints the extended text and exits 0', async () => {
+    const writes: string[] = [];
+    const spy = vi.spyOn(process.stdout, 'write').mockImplementation(((chunk: unknown) => {
+      writes.push(String(chunk));
+      return true;
+    }) as typeof process.stdout.write);
+    try {
+      expect(await main(['--help', 'dry-threshold'])).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(writes.join('')).toMatch(/similarity|duplicat/i);
   });
 });
 
