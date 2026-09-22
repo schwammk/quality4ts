@@ -88,14 +88,18 @@ export interface MapViewProps {
   dataset: ReportDataset;
   initialPath?: string[];
   onOpenModule: (module: string) => void;
+  onOpenSource?: (file: string, line: number) => void;
   onNavigate?: () => void;
 }
 
 export function MapView(props: MapViewProps): JSX.Element {
-  const { dataset, initialPath, onOpenModule, onNavigate } = props;
+  const { dataset, initialPath, onOpenModule, onOpenSource, onNavigate } = props;
   const [path, setPath] = useState<string[]>(() => initialPath ?? []);
   const [stack, setStack] = useState<{ path: string[]; scrollX: number; scrollY: number }[]>([]);
   const [zoom, setZoom] = useState(1);
+  const [tip, setTip] = useState<{ lines: { text: string; cycle: boolean }[]; x: number; y: number } | null>(null);
+  const [hoveredCycle, setHoveredCycle] = useState<string | null>(null);
+  const [focusedCycle, setFocusedCycle] = useState<string | null>(null);
   const view = useMemo(() => buildMapView(dataset, path), [dataset, path]);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -104,6 +108,34 @@ export function MapView(props: MapViewProps): JSX.Element {
     () => new Map(dataset.modules.map((m) => [m.module, m])),
     [dataset]
   );
+  // this level's cycle paths keyed by their display line (subtree lines are not focusable)
+  const cyclePathsByLine = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const p of view.cyclePaths) {
+      const line = p.map(stripFileSuffix).join('->');
+      if (!map.has(line)) map.set(line, p);
+    }
+    return map;
+  }, [view]);
+  const focusLine = hoveredCycle ?? focusedCycle;
+  const focusPath = focusLine !== null ? cyclePathsByLine.get(focusLine) ?? null : null;
+  const focusParticipants = useMemo(
+    () => new Set(focusPath ?? []),
+    [focusPath]
+  );
+  const applyCycleDim = (svg: SVGSVGElement, line: string) => {
+    const cyclePath = cyclePathsByLine.get(line);
+    if (!cyclePath) return;
+    const pairs = new Set<string>();
+    for (let i = 0; i < cyclePath.length - 1; i++) {
+      pairs.add(`${cyclePath[i]}\u0000${cyclePath[i + 1]}`);
+      pairs.add(`${cyclePath[i + 1]}\u0000${cyclePath[i]}`);
+    }
+    svg.querySelectorAll('line[data-from], polygon[data-from]').forEach((el) => {
+      const pair = `${el.getAttribute('data-from')}\u0000${el.getAttribute('data-to')}`;
+      el.classList.toggle('dimmed', !pairs.has(pair));
+    });
+  };
 
   // drill state resets when a new dataset arrives
   useEffect(() => {
@@ -142,25 +174,84 @@ export function MapView(props: MapViewProps): JSX.Element {
     };
   }, []);
 
-  // ONE delegated listener pair for hover dimming + click drill
+  // ONE delegated listener pair for hover dimming + tooltips + click drill
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
+    const traceFileFor = (from: string, to: string): { file: string; line: number } | null => {
+      const edge = view.edges.find((e) => e.from === from && e.to === to);
+      if (!edge?.lines || edge.lines.length === 0) return null;
+      const fromNode = view.nodes.find((n) => n.id === from);
+      if (fromNode && (fromNode.leaf === false || fromNode.module === null)) return null;
+      const file = fromNode?.module ?? (fromNode ? null : from);
+      if (file === null) return null;
+      return { file, line: edge.lines[0] };
+    };
     const onOver = (e: MouseEvent) => {
-      const target = (e.target as Element).closest('[data-module]');
+      const el = e.target as Element;
+      const ind = el.closest('[data-indicator]');
+      if (ind) {
+        const indicator = view.indicators.find(
+          (i) => i.moduleId === ind.getAttribute('data-indicator') && i.direction === ind.getAttribute('data-direction')
+        );
+        if (indicator) {
+          setTip({ lines: indicator.tooltipLines, x: e.clientX, y: e.clientY });
+          return;
+        }
+      }
+      const cycleText = el.closest('[data-cycle-line]');
+      if (cycleText) {
+        setHoveredCycle(cycleText.getAttribute('data-cycle-line'));
+        return;
+      }
+      const edgeEl = el.closest('line[data-from], polygon[data-from]');
+      if (edgeEl) {
+        const from = edgeEl.getAttribute('data-from')!;
+        const to = edgeEl.getAttribute('data-to')!;
+        const trace = traceFileFor(from, to);
+        if (trace) {
+          const edge = view.edges.find((e2) => e2.from === from && e2.to === to)!;
+          setTip({
+            lines: edge.lines!.map((l) => ({ text: `import at line ${l}`, cycle: edge.cycleBreak })),
+            x: e.clientX,
+            y: e.clientY,
+          });
+        }
+        return;
+      }
+      const target = el.closest('[data-module]');
       if (!target) return;
       const id = target.getAttribute('data-module')!;
-      svg.querySelectorAll('line[data-from], polygon[data-from]').forEach((el) => {
-        const from = el.getAttribute('data-from');
-        const to = el.getAttribute('data-to');
-        el.classList.toggle('dimmed', from !== id && to !== id);
+      svg.querySelectorAll('line[data-from], polygon[data-from]').forEach((el2) => {
+        const from = el2.getAttribute('data-from');
+        const to = el2.getAttribute('data-to');
+        el2.classList.toggle('dimmed', from !== id && to !== id);
       });
     };
     const onOut = () => {
+      setTip(null);
+      setHoveredCycle(null);
       svg.querySelectorAll('.dimmed').forEach((el) => el.classList.remove('dimmed'));
+      if (focusedCycle !== null) applyCycleDim(svg, focusedCycle);
     };
     const onClick = (e: MouseEvent) => {
-      const target = (e.target as Element).closest('[data-module]');
+      const el = e.target as Element;
+      const cycleText = el.closest('[data-cycle-line]');
+      if (cycleText) {
+        const line = cycleText.getAttribute('data-cycle-line')!;
+        setFocusedCycle((prev) => (prev === line ? null : line));
+        return;
+      }
+      const edgeEl = el.closest('line[data-from], polygon[data-from]');
+      if (edgeEl) {
+        const trace = traceFileFor(edgeEl.getAttribute('data-from')!, edgeEl.getAttribute('data-to')!);
+        if (trace) {
+          onOpenSource?.(trace.file, trace.line);
+          return;
+        }
+        return;
+      }
+      const target = el.closest('[data-module]');
       if (!target) return;
       const id = target.getAttribute('data-module')!;
       const node = view.nodes.find((n) => n.id === id);
@@ -188,7 +279,28 @@ export function MapView(props: MapViewProps): JSX.Element {
       svg.removeEventListener('mouseout', onOut);
       svg.removeEventListener('click', onClick);
     };
-  }, [view, path, onOpenModule, onNavigate]);
+  }, [view, path, onOpenModule, onOpenSource, onNavigate, focusedCycle, cyclePathsByLine]);
+
+  // cycle focus: dim every edge that is not part of the focused cycle
+  const lastFocusLine = useRef<string | null>(null);
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const focusLineNow = hoveredCycle ?? focusedCycle;
+    if (focusLineNow !== null) {
+      lastFocusLine.current = focusLineNow;
+      applyCycleDim(svg, focusLineNow);
+    } else if (lastFocusLine.current !== null) {
+      lastFocusLine.current = null;
+      svg.querySelectorAll('.dimmed').forEach((el) => el.classList.remove('dimmed'));
+    }
+  }, [view, hoveredCycle, focusedCycle, cyclePathsByLine]);
+
+  // navigation resets the cycle focus
+  useEffect(() => {
+    setFocusedCycle(null);
+    setHoveredCycle(null);
+  }, [path]);
 
   const goBack = () => {
     const prev = stack[stack.length - 1];
@@ -249,7 +361,7 @@ export function MapView(props: MapViewProps): JSX.Element {
                     `${baseX - px * 5},${baseY - py * 5}`,
                     `${toExit.x},${toExit.y}`,
                   ].join(' ')}
-                  fill={edge.type === 'abstract' ? '#c92a2a' : 'none'}
+                  fill={edge.type === 'abstract' ? '#1f2430' : 'none'}
                   stroke={stroke}
                   data-from={edge.from} data-to={edge.to}
                 />
@@ -261,7 +373,7 @@ export function MapView(props: MapViewProps): JSX.Element {
               <rect
                 x={node.x} y={node.y} width={node.width} height={node.height}
                 fill={node.abstract ? 'rgb(226,242,226)' : 'rgb(225,233,242)'}
-                stroke={node.leaf ? '#000' : 'rgb(120,140,160)'}
+                stroke={focusParticipants.has(node.id) ? '#b40000' : node.leaf ? '#000' : 'rgb(120,140,160)'}
                 strokeWidth={node.leaf ? 3 : 1}
                 data-module={node.id}
               />
@@ -345,22 +457,56 @@ export function MapView(props: MapViewProps): JSX.Element {
                 </Fragment>
               );
             })}
+          {view.indicators.map((ind, i) => (
+            <polygon
+              key={`indicator-${i}`}
+              points={[
+                `${ind.triangle.x1},${ind.triangle.y1}`,
+                `${ind.triangle.x2},${ind.triangle.y2}`,
+                `${ind.triangle.x3},${ind.triangle.y3}`,
+              ].join(' ')}
+              fill={ind.cycle ? 'rgb(180,0,0)' : '#000'}
+              data-indicator={ind.moduleId}
+              data-direction={ind.direction}
+            />
+          ))}
           {view.cycleLines.length > 0 && (
             <>
               <text x={20} y={cycleListY} fill="rgb(120,0,0)" fontSize={14}>Cycles:</text>
-              {view.cycleLines.map((line, i) => (
-                <text
-                  key={`cycle-${i}`}
-                  x={20} y={cycleListY + 20 + i * LAYOUT.cycleLineHeight}
-                  fill="rgb(150,0,0)" fontSize={12}
-                >
-                  {line}
-                </text>
-              ))}
+              {view.cycleLines.map((line, i) => {
+                const focusable = cyclePathsByLine.has(line);
+                const active = hoveredCycle === line || focusedCycle === line;
+                return (
+                  <text
+                    key={`cycle-${i}`}
+                    x={20} y={cycleListY + 20 + i * LAYOUT.cycleLineHeight}
+                    fill={focusedCycle === line ? '#b40000' : 'rgb(150,0,0)'} fontSize={12}
+                    data-cycle-line={focusable ? line : undefined}
+                    style={focusable ? { cursor: 'pointer', textDecoration: active ? 'underline' : undefined } : undefined}
+                  >
+                    {line}
+                  </text>
+                );
+              })}
             </>
           )}
         </svg>
       </div>
+      {tip && (
+        <div
+          id="map-tip"
+          style={{
+            position: 'fixed', left: tip.x + 12, top: tip.y + 12, maxWidth: 360,
+            background: '#fff', border: '1px solid #ccc', padding: '4px 8px',
+            fontSize: 11, lineHeight: '16px', pointerEvents: 'none', zIndex: 30,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+          }}
+        >
+          {tip.lines.map((l, i) => (
+            <div key={i} style={{ color: l.cycle ? '#b40000' : '#0f141e' }}>{l.text}</div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

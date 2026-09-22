@@ -37,7 +37,7 @@ export interface ModuleRollup {
 
 export interface ArchitectureDump {
   architecture: {
-    graph: { nodes: string[]; edges: { from: string; to: string }[] };
+    graph: { nodes: string[]; edges: { from: string; to: string; lines?: number[] }[] };
     abstractModules: string[];
     moduleToSourceFile: Record<string, string>;
   };

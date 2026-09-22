@@ -55,7 +55,12 @@ export function App() {
           ? <div>{scanning ? 'Scanning…' : 'Loading…'}</div>
           : <>
               <div style={{ display: tab === 'Map' ? undefined : 'none' }}>
-                <MapView dataset={dataset} onOpenModule={(m) => { setTab('Hotspots'); setModuleFilter(m); setSelected({ file: m, line: 0 }); setPairSel(null); }} onNavigate={() => { setSelected(null); setPairSel(null); }} />
+                <MapView
+                  dataset={dataset}
+                  onOpenModule={(m) => { setTab('Hotspots'); setModuleFilter(m); setSelected({ file: m, line: 0 }); setPairSel(null); }}
+                  onOpenSource={(file, line) => { setSelected({ file, line }); setPairSel(null); }}
+                  onNavigate={() => { setSelected(null); setPairSel(null); }}
+                />
               </div>
               {tab === 'Hotspots'
                 ? <div data-tab={tab}><Hotspots dataset={dataset} moduleFilter={moduleFilter} onOpenFunction={(file, startLine) => { setSelected({ file, line: startLine }); setPairSel(null); }} onClearModule={() => setModuleFilter(null)} onBackToMap={() => setTab('Map')} /></div>

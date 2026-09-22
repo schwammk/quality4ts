@@ -7,6 +7,7 @@ import {
   layoutView,
   type Edge,
   type EdgeView,
+  type IndicatorView,
   type MapView,
   type NodeView,
 } from './layout.js';
@@ -106,7 +107,11 @@ interface AggregatedEdge {
   to: string;
   type: 'abstract' | 'direct';
   count: number;
+  lines: number[];
 }
+
+const mergeLineLists = (a: number[], b: number[]): number[] =>
+  [...new Set([...a, ...b])].sort((x, y) => x - y);
 
 interface ProjectedView {
   path: string[];
@@ -117,14 +122,15 @@ interface ProjectedView {
 }
 
 function classifyEdges(
-  edges: { from: string; to: string }[],
+  edges: { from: string; to: string; lines?: number[] }[],
   abstractModules: Set<string>
-): { from: string; to: string; type: 'abstract' | 'direct' }[] {
+): { from: string; to: string; type: 'abstract' | 'direct'; lines: number[] }[] {
   return edges
     .map((e) => ({
       from: e.from,
       to: e.to,
       type: (abstractModules.has(e.to) ? 'abstract' : 'direct') as 'abstract' | 'direct',
+      lines: e.lines ?? [],
     }))
     .sort((a, b) => (a.from !== b.from ? (a.from < b.from ? -1 : 1) : a.to < b.to ? -1 : 1));
 }
@@ -176,8 +182,9 @@ function projectView(
     if (existing) {
       existing.count += 1;
       if (e.type === 'abstract') existing.type = 'abstract';
+      existing.lines = mergeLineLists(existing.lines, e.lines);
     } else {
-      aggregated.set(key, { from: f, to: t, type: e.type, count: 1 });
+      aggregated.set(key, { from: f, to: t, type: e.type, count: 1, lines: [...e.lines] });
     }
   }
   const internalEdges = [...aggregated.values()].sort(
@@ -198,8 +205,9 @@ function projectView(
     if (existing) {
       existing.count += 1;
       if (e.type === 'abstract') existing.type = 'abstract';
+      existing.lines = mergeLineLists(existing.lines, e.lines);
     } else {
-      displayEdges.set(key, { from: f ?? e.from, to: t ?? e.to, type: e.type, count: 1 });
+      displayEdges.set(key, { from: f ?? e.from, to: t ?? e.to, type: e.type, count: 1, lines: [...e.lines] });
     }
   }
   const displayEdgeList = [...displayEdges.values()].sort(
@@ -423,11 +431,61 @@ export function buildMapView(dataset: ReportDataset, path: string[]): MapView {
     count: e.count,
     type: e.type,
     cycleBreak: feedbackSet.has(`${e.from}\u0000${e.to}`),
+    ...(e.lines.length > 0 ? { lines: e.lines } : {}),
   }));
 
-  void nodes;
+  // dependency indicators (port of arch4ts render/scene.ts, dependency_indicators.clj)
+  const rectOf = new Map(nodes.map((n) => [n.id, n]));
+  const triangleH = LAYOUT.triangleSide * LAYOUT.triangleHeightFactor;
+  const halfSide = LAYOUT.triangleSide / 2;
+  const incoming = new Map<string, { text: string; cycle: boolean }[]>();
+  const outgoing = new Map<string, { text: string; cycle: boolean }[]>();
+  for (const e of edges) {
+    const list = incoming.get(e.to) ?? [];
+    list.push({ text: e.from, cycle: e.cycleBreak });
+    incoming.set(e.to, list);
+    const list2 = outgoing.get(e.from) ?? [];
+    list2.push({ text: e.to, cycle: e.cycleBreak });
+    outgoing.set(e.from, list2);
+  }
+  const indicators: IndicatorView[] = [];
+  for (const node of nodes) {
+    for (const direction of ['incoming', 'outgoing'] as const) {
+      const entries = (direction === 'incoming' ? incoming : outgoing).get(node.id) ?? [];
+      if (entries.length === 0) continue;
+      // dedupe by text, cycle = OR, sorted by text
+      const byText = new Map<string, boolean>();
+      for (const t of entries) byText.set(t.text, (byText.get(t.text) ?? false) || t.cycle);
+      const tooltipLines = [...byText.entries()]
+        .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+        .map(([text, cycle]) => ({ text, cycle }));
+      const cx = node.x + node.width / 2;
+      const edgeY = direction === 'incoming' ? node.y : node.y + node.height;
+      indicators.push({
+        moduleId: node.id,
+        direction,
+        triangle: {
+          x1: cx - halfSide,
+          y1: edgeY,
+          x2: cx + halfSide,
+          y2: edgeY,
+          x3: cx,
+          y3: edgeY + triangleH,
+        },
+        cycle: tooltipLines.some((t) => t.cycle),
+        tooltipLines,
+      });
+    }
+  }
+  indicators.sort(
+    (a, b) =>
+      (a.moduleId < b.moduleId ? -1 : a.moduleId > b.moduleId ? 1 : 0) ||
+      (a.direction < b.direction ? -1 : 1)
+  );
+
+  void rectOf;
   const sceneHeight = computeSceneHeight(nodes, cycleLines);
-  return { namespacePath: path, nodes, edges, cycleLines, sceneHeight };
+  return { namespacePath: path, nodes, edges, cycleLines, cyclePaths: layering.cycles, indicators, sceneHeight };
 }
 
 function computeSceneHeight(nodes: NodeView[], cycleLines: string[]): number {

@@ -58,6 +58,64 @@ describe('buildReport', () => {
   });
 });
 
+describe('buildReport validates arch4ts graph edges', () => {
+  const archWithLines = {
+    architecture: {
+      graph: {
+        nodes: ['src/a.ts', 'src/b.ts'],
+        edges: [{ from: 'src/a.ts', to: 'src/b.ts', lines: [3, 7] }],
+      },
+      abstractModules: [],
+      moduleToSourceFile: { 'src/a.ts': 'src/a.ts', 'src/b.ts': 'src/b.ts' },
+    },
+    layering: { layers: [] },
+  };
+  const input = (architectureRaw: unknown) => ({
+    target: '/tgt',
+    thresholds: { maxCrap: 30, dryThreshold: 0.82 },
+    architectureRaw,
+    crapRaw: [{ file: 'src/a.ts', name: 'a', cc: 1, coverage: null, crap: null, risk: 'unknown', startLine: 1, endLine: 2 }],
+    dryRaw: [],
+    generatedAt: '2026-09-14T00:00:00.000Z',
+  });
+
+  it('passes edge line numbers through to the dataset', () => {
+    const report = buildReport(input(archWithLines));
+    expect(report.architecture.architecture.graph.edges).toEqual([{ from: 'src/a.ts', to: 'src/b.ts', lines: [3, 7] }]);
+  });
+
+  it('tolerates edges without lines (older arch4ts dumps)', () => {
+    const report = buildReport(input({
+      ...archWithLines,
+      architecture: { ...archWithLines.architecture, graph: { ...archWithLines.architecture.graph, edges: [{ from: 'src/a.ts', to: 'src/b.ts' }] } },
+    }));
+    expect(report.architecture.architecture.graph.edges).toEqual([{ from: 'src/a.ts', to: 'src/b.ts' }]);
+  });
+
+  it('rejects edges without from/to', () => {
+    expect(() => buildReport(input({
+      ...archWithLines,
+      architecture: { ...archWithLines.architecture, graph: { ...archWithLines.architecture.graph, edges: [{ to: 'src/b.ts' }] } },
+    }))).toThrow('malformed: arch4ts dump has invalid graph edges');
+  });
+
+  it('rejects malformed line numbers', () => {
+    for (const bad of ['nope', [0], [-1], ['3'], 5]) {
+      expect(() => buildReport(input({
+        ...archWithLines,
+        architecture: { ...archWithLines.architecture, graph: { ...archWithLines.architecture.graph, edges: [{ from: 'src/a.ts', to: 'src/b.ts', lines: bad }] } },
+      }))).toThrow('malformed: arch4ts dump has invalid edge lines');
+    }
+  });
+
+  it('rejects a graph whose edges are not an array', () => {
+    expect(() => buildReport(input({
+      ...archWithLines,
+      architecture: { ...archWithLines.architecture, graph: { ...archWithLines.architecture.graph, edges: {} } },
+    }))).toThrow('malformed: arch4ts dump has invalid graph edges');
+  });
+});
+
 describe('buildReport normalizes absolute sibling paths', () => {
   // crap4ts and dry4ts emit absolute paths; arch4ts module names are relative.
   const absCrap = [

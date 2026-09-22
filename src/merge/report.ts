@@ -25,7 +25,24 @@ function parseArchitecture(raw: unknown): ArchitectureDump {
   if (typeof arch.graph !== 'object' || arch.graph === null || Array.isArray(arch.graph)) {
     throw new CliError('malformed: arch4ts dump lacks a graph object');
   }
+  const graph = arch.graph as Record<string, unknown>;
+  if (!Array.isArray(graph.edges) || !graph.edges.every(isValidEdge)) {
+    throw new CliError('malformed: arch4ts dump has invalid graph edges');
+  }
+  if (!graph.edges.every((edge) => (edge as { lines?: unknown }).lines === undefined || isValidLines((edge as { lines?: unknown }).lines))) {
+    throw new CliError('malformed: arch4ts dump has invalid edge lines');
+  }
   return raw as ArchitectureDump;
+}
+
+function isValidEdge(edge: unknown): boolean {
+  if (typeof edge !== 'object' || edge === null || Array.isArray(edge)) return false;
+  const e = edge as Record<string, unknown>;
+  return typeof e.from === 'string' && typeof e.to === 'string';
+}
+
+function isValidLines(lines: unknown): boolean {
+  return Array.isArray(lines) && lines.every((n) => typeof n === 'number' && Number.isInteger(n) && n >= 1);
 }
 
 // crap4ts and dry4ts emit absolute file paths while arch4ts module names

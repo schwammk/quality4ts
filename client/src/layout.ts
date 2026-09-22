@@ -48,6 +48,15 @@ export interface EdgeView {
   count: number;
   type: 'abstract' | 'direct';
   cycleBreak: boolean;
+  lines?: number[];
+}
+
+export interface IndicatorView {
+  moduleId: string;
+  direction: 'incoming' | 'outgoing';
+  triangle: { x1: number; y1: number; x2: number; y2: number; x3: number; y3: number };
+  cycle: boolean;
+  tooltipLines: { text: string; cycle: boolean }[];
 }
 
 export interface MapView {
@@ -55,6 +64,8 @@ export interface MapView {
   nodes: NodeView[];
   edges: EdgeView[];
   cycleLines: string[];
+  cyclePaths: string[][];
+  indicators: IndicatorView[];
   sceneHeight: number;
 }
 

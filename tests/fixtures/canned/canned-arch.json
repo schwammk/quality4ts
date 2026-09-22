@@ -3,8 +3,8 @@
     "graph": {
       "nodes": ["src/a.ts", "src/b.ts", "src/c.ts"],
       "edges": [
-        { "from": "src/a.ts", "to": "src/b.ts" },
-        { "from": "src/b.ts", "to": "src/c.ts" }
+        { "from": "src/a.ts", "to": "src/b.ts", "lines": [3] },
+        { "from": "src/b.ts", "to": "src/c.ts", "lines": [7] }
       ]
     },
     "abstractModules": ["src/b.ts"],
